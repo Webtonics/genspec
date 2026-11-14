@@ -1,0 +1,136 @@
+@import 'tailwindcss';
+
+/* `scada:` variant, active when <html data-mode="scada">. */
+@custom-variant scada (&:where([data-mode='scada'], [data-mode='scada'] *));
+
+/*
+ * Colour tokens. Components use the semantic names (bg-surface, text-ink,
+ * border-line, stroke-markup...) and the two display modes swap the values.
+ */
+:root {
+  color-scheme: light;
+
+  /* App content area */
+  --app-canvas: #f1f5f9;
+  --app-surface: #ffffff;
+  --app-surface-2: #f8fafc;
+  --app-line: #e2e8f0;
+  --app-line-strong: #cbd5e1;
+  --app-ink: #0f172a;
+  --app-muted: #64748b;
+  --app-primary: #1f6feb;
+  --app-primary-hover: #1a5fd1;
+  --app-primary-fg: #ffffff;
+
+  /* Sidebar: dark in both modes */
+  --side-bg: #0b1220;
+  --side-line: #1c2638;
+  --side-ink: #e2e8f0;
+  --side-muted: #8391a7;
+  --side-hover: rgb(255 255 255 / 0.05);
+  --side-active: rgb(76 141 246 / 0.16);
+  --side-accent: #4c8df6;
+  --side-accent-fg: #ffffff;
+
+  /* Drawing sheet (markups, spread diagrams, sketches) */
+  --sheet-bg: #ffffff;
+  --sheet-line: #111111;
+  --sheet-grid: #e5e7eb;
+  --sheet-text: #111111;
+  --markup: #d7263d;
+  --instrument: #1f6feb;
+  --accent: #d7263d;
+  --highlight: #ffd60a;
+  --selection: #0ea5e9;
+  --viewer-bg: #d9dfe7;
+}
+
+[data-mode='scada'] {
+  color-scheme: dark;
+
+  --app-canvas: #0b0f0e;
+  --app-surface: #111715;
+  --app-surface-2: #0e1312;
+  --app-line: #1d2925;
+  --app-line-strong: #2a3934;
+  --app-ink: #e2f0e9;
+  --app-muted: #7d958b;
+  --app-primary: #00e87b;
+  --app-primary-hover: #00cc6c;
+  --app-primary-fg: #04110a;
+
+  --side-bg: #070a09;
+  --side-line: #16201c;
+  --side-ink: #d3e6dc;
+  --side-muted: #6b8479;
+  --side-hover: rgb(0 232 123 / 0.06);
+  --side-active: rgb(0 232 123 / 0.12);
+  --side-accent: #00e87b;
+  --side-accent-fg: #04110a;
+
+  --sheet-bg: #0b0f0e;
+  --sheet-line: #00e87b;
+  --sheet-grid: #14201c;
+  --sheet-text: #b8f5d6;
+  --markup: #ffb020;
+  --instrument: #4cc9f0;
+  --accent: #ffb020;
+  --highlight: #ffb020;
+  --selection: #4cc9f0;
+  --viewer-bg: #050807;
+}
+
+@theme inline {
+  --color-canvas: var(--app-canvas);
+  --color-surface: var(--app-surface);
+  --color-surface-2: var(--app-surface-2);
+  --color-line: var(--app-line);
+  --color-line-strong: var(--app-line-strong);
+  --color-ink: var(--app-ink);
+  --color-muted: var(--app-muted);
+  --color-primary: var(--app-primary);
+  --color-primary-hover: var(--app-primary-hover);
+  --color-primary-fg: var(--app-primary-fg);
+
+  --color-side: var(--side-bg);
+  --color-side-line: var(--side-line);
+  --color-side-ink: var(--side-ink);
+  --color-side-muted: var(--side-muted);
+  --color-side-hover: var(--side-hover);
+  --color-side-active: var(--side-active);
+  --color-side-accent: var(--side-accent);
+  --color-side-accent-fg: var(--side-accent-fg);
+
+  --color-sheet: var(--sheet-bg);
+  --color-sheet-line: var(--sheet-line);
+  --color-sheet-grid: var(--sheet-grid);
+  --color-sheet-text: var(--sheet-text);
+  --color-markup: var(--markup);
+  --color-instrument: var(--instrument);
+  --color-accent: var(--accent);
+  --color-highlight: var(--highlight);
+  --color-selection: var(--selection);
+  --color-viewer: var(--viewer-bg);
+}
+
+@theme {
+  --font-sans: Inter, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+    transition: background-color 150ms ease;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--app-primary) 25%, transparent);
+  }
+}

@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules
+dist
+dist-ssr
+coverage
+*.tsbuildinfo
+
+# Environment (the optional AI server key lives here)
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor and OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+
+# Assistant instruction files (kept out of the repo)
+CLAUDE.md
+PROMPTS.md
+.claude/

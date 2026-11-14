@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" data-mode="engineering">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="GenSpec by Area50: pre-commissioning documents generated from one job data model." />
+    <title>GenSpec by Area50</title>
+    <script>
+      // Apply the saved display mode before first paint so SCADA mode does not flash white.
+      // A ?mode=scada or ?mode=engineering query parameter overrides the saved choice.
+      (function () {
+        try {
+          var q = new URLSearchParams(location.search).get('mode');
+          var saved = JSON.parse(localStorage.getItem('genspec-ui') || 'null');
+          var mode = q === 'scada' || q === 'engineering' ? q : saved && saved.state && saved.state.mode;
+          if (mode === 'scada') document.documentElement.dataset.mode = 'scada';
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
