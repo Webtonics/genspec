@@ -255,7 +255,8 @@ function RegisterView({ job, register, texts, pageNumber }: { job: Job; register
         </div>
       )}
 
-      <MarkUpForMe job={job} pageNumber={pageNumber} open={suggestions.filter((s) => !s.done).length} />
+      {/* Only suggestions it can place: one with no tag found on the sheet is left for the engineer to place. */}
+      <MarkUpForMe job={job} pageNumber={pageNumber} open={suggestions.filter((s) => !s.done && (s.at !== null || s.type === 'boundary')).length} />
 
       <Group title="Suggested test limits" count={suggestions.length}>
         {suggestions.length === 0 ? (
