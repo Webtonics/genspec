@@ -6,10 +6,13 @@
 
 /**
  * Used when OPENAI_MODEL is not set. Must read images and support structured outputs.
- * On the sample P&ID gpt-5.5 read valve types and both test limits in about 15 s;
- * gpt-5.4-mini took 8 s but missed both, gpt-5-mini took 32 s.
+ * Scored against the sample P&ID's known contents (valves, types, instruments, lines,
+ * design data, test limits, PSV blinds), on the vector PDF and a degraded scan:
+ * gpt-6-astra was perfect on every run in 30 to 40 s; gpt-5.5 scored 56 to 58 of 58
+ * in about 18 s; the gpt-5.6, gpt-6 sol and luna, and gpt-6.1 models often missed the
+ * test limit valves or the relief valve blinds.
  */
-export const DEFAULT_MODEL = 'gpt-5.5';
+export const DEFAULT_MODEL = 'gpt-6-astra';
 
 export type AiConfig = { key?: string; model: string; effort?: string; accessCode?: string };
 
@@ -20,7 +23,7 @@ export function aiConfig(): AiConfig {
     key: process.env.OPENAI_API_KEY?.trim() || undefined,
     model,
     // Reasoning models think before answering; low effort keeps reading a drawing to seconds, not minutes.
-    effort: configured || (/^(o\d|gpt-5)/.test(model) ? 'low' : undefined),
+    effort: configured || (/^(o\d|gpt-[5-9])/.test(model) ? 'low' : undefined),
     accessCode: process.env.GENSPEC_ACCESS_CODE?.trim() || undefined,
   };
 }
@@ -96,17 +99,24 @@ export async function structuredCompletion<T>(
   };
   if (config.effort) body.reasoning_effort = config.effort;
 
-  let res: Response;
-  try {
-    res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${config.key}`, 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(o.timeoutMs),
-    });
-  } catch (err) {
-    const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
-    throw new AiError(504, timedOut ? 'OpenAI took too long to answer. Try again.' : 'Could not reach OpenAI.');
+  const payload = JSON.stringify(body);
+  const deadline = Date.now() + o.timeoutMs;
+  let res: Response | undefined;
+  // One retry when the connection drops before an answer (a reused connection the
+  // other side had closed). Never for a timeout or an error answer from OpenAI.
+  for (let attempt = 1; !res; attempt++) {
+    try {
+      res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${config.key}`, 'content-type': 'application/json' },
+        body: payload,
+        signal: AbortSignal.timeout(Math.max(1000, deadline - Date.now())),
+      });
+    } catch (err) {
+      const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+      if (timedOut) throw new AiError(504, 'OpenAI took too long to answer. Try again.');
+      if (attempt >= 2 || deadline - Date.now() < 5000) throw new AiError(502, 'Could not reach OpenAI. Try again.');
+    }
   }
   if (!res.ok) throw new AiError(502, explainOpenAiError(res.status, await res.text(), config.model));
 
