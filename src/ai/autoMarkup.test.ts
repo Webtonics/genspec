@@ -4,6 +4,7 @@ import type { Segment } from '@/markup/lineSnap';
 import { createMarkup } from '@/markup/ops';
 import type { Markup } from '@/model/types';
 import { acceptDrafts, aiDraftCount, planAutoMarkup, removeDrafts } from './autoMarkup';
+import { suggestionViews } from './drawingRegister';
 import type { DrawingRegister } from './types';
 
 const t = (str: string, x: number, y: number, width = str.length * 4, height = 6): DrawingText => ({ str, x, y, width, height });
@@ -157,6 +158,21 @@ describe('choosing where a tag is printed', () => {
   it('prefers the label on the pipe to an underlined callout header', () => {
     const { added } = plan([{ action: 'vent', nearTag: '12"-EXP-001', reason: 'High point vent.' }]);
     expect(added[0].points).toEqual([{ x: 650, y: 100 }]);
+  });
+
+  it('counts a draft placed at a later occurrence as done, so a second run adds nothing', () => {
+    const suggestions: DrawingRegister['suggestions'] = [{ action: 'vent', nearTag: '12"-EXP-001', reason: 'High point vent.' }];
+    const first = plan(suggestions);
+    const again = planAutoMarkup({
+      register: register(suggestions),
+      texts: extraTexts,
+      segments: extraSegments,
+      page: 1,
+      pageSize: { width: 1190, height: 842 },
+      markups: first.markups,
+    });
+    expect(again.added).toEqual([]);
+    expect(suggestionViews(register(suggestions), extraTexts, first.markups, 1)[0].done).toBe(true);
   });
 });
 

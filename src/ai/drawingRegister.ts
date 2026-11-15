@@ -118,25 +118,32 @@ export function findTagRuns(tag: string, texts: DrawingText[]): DrawingText[] {
 
 export function suggestionViews(register: DrawingRegister, texts: DrawingText[], markups: Markup[], page: number): SuggestionView[] {
   const onPage = markups.filter((m) => m.page === page);
-  // The n-th suggestion at a repeated label goes to its n-th occurrence on the sheet.
+  // The n-th suggestion at a repeated label goes to its n-th occurrence on the sheet (for Locate).
   const used = new Map<string, number>();
+  // Suggestions of one kind at one tag count as done in order, one per markup of that kind near any
+  // place the tag is printed. So it agrees with Mark up for me whichever occurrence that used.
+  const groupIndex = new Map<string, number>();
+  const groupDone = new Map<string, number>();
   return register.suggestions.map((s) => {
     const want = s.nearTag ? normalizeTag(s.nearTag) : '';
-    let at: Point | null = null;
-    if (s.nearTag) {
-      const all = locateTagAll(s.nearTag, texts);
-      const n = used.get(want) ?? 0;
-      used.set(want, n + 1);
-      at = all[n] ?? all[0] ?? null;
+    const all = s.nearTag ? locateTagAll(s.nearTag, texts) : [];
+    const n = used.get(want) ?? 0;
+    used.set(want, n + 1);
+    const at = all[n] ?? all[0] ?? null;
+
+    const group = `${s.action}|${want}`;
+    const index = groupIndex.get(group) ?? 0;
+    groupIndex.set(group, index + 1);
+    if (!groupDone.has(group)) {
+      const count = onPage.filter((m) => {
+        if (m.type !== s.action) return false;
+        if (s.action === 'boundary') return true;
+        if (s.action === 'valve' && want && normalizeTag(m.tag) === want) return true;
+        return all.some((o) => m.points.some((p) => Math.hypot(p.x - o.x, p.y - o.y) <= DONE_DISTANCE));
+      }).length;
+      groupDone.set(group, count);
     }
-    const done = onPage.some((m) => {
-      if (m.type !== s.action) return false;
-      if (s.action === 'boundary') return true;
-      if (s.action === 'valve' && want && normalizeTag(m.tag) === want) return true;
-      if (!at) return false;
-      return m.points.some((p) => Math.hypot(p.x - at.x, p.y - at.y) <= DONE_DISTANCE);
-    });
-    return { ...s, type: s.action, at, done };
+    return { ...s, type: s.action, at, done: index < (groupDone.get(group) ?? 0) };
   });
 }
 
