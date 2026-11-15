@@ -90,11 +90,45 @@ export type SuggestionView = DrawingRegister['suggestions'][number] & {
 /** How close a markup must be to the suggested tag to count as done, in points. */
 const DONE_DISTANCE = 90;
 
+/**
+ * Every place a tag or label is printed, left to right then top to bottom. Labels
+ * such as 2" VENT appear several times on one sheet. Falls back to locateTag for
+ * tags drawn in pieces or in instrument bubbles.
+ */
+export function locateTagAll(tag: string, texts: DrawingText[]): Point[] {
+  const runs = findTagRuns(tag, texts);
+  if (runs.length) return runs.map(center);
+  const one = locateTag(tag, texts);
+  return one ? [one] : [];
+}
+
+/**
+ * The text runs that print a tag, left to right. Runs that are exactly the tag win;
+ * a tag mentioned inside a sentence (a drawing note) only counts when it is printed
+ * nowhere on its own.
+ */
+export function findTagRuns(tag: string, texts: DrawingText[]): DrawingText[] {
+  const want = normalizeTag(tag);
+  if (!want) return [];
+  const byPosition = (a: DrawingText, b: DrawingText) => a.x - b.x || a.y - b.y;
+  const exact = texts.filter((t) => normalizeTag(t.str) === want);
+  if (exact.length) return exact.sort(byPosition);
+  return texts.filter((t) => t.str.toUpperCase().split(/[\s,;()]+/).some((w) => normalizeTag(w) === want)).sort(byPosition);
+}
+
 export function suggestionViews(register: DrawingRegister, texts: DrawingText[], markups: Markup[], page: number): SuggestionView[] {
   const onPage = markups.filter((m) => m.page === page);
+  // The n-th suggestion at a repeated label goes to its n-th occurrence on the sheet.
+  const used = new Map<string, number>();
   return register.suggestions.map((s) => {
-    const at = s.nearTag ? locateTag(s.nearTag, texts) : null;
     const want = s.nearTag ? normalizeTag(s.nearTag) : '';
+    let at: Point | null = null;
+    if (s.nearTag) {
+      const all = locateTagAll(s.nearTag, texts);
+      const n = used.get(want) ?? 0;
+      used.set(want, n + 1);
+      at = all[n] ?? all[0] ?? null;
+    }
     const done = onPage.some((m) => {
       if (m.type !== s.action) return false;
       if (s.action === 'boundary') return true;

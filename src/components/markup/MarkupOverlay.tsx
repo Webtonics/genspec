@@ -4,7 +4,7 @@
  */
 import { type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, useRef, useState } from 'react';
 import type { DrawingText } from '@/markup/drawingText';
-import { clampPoint, cloudPath, polylinePath } from '@/markup/geometry';
+import { bounds, clampPoint, cloudPath, polylinePath } from '@/markup/geometry';
 import { type SymbolType, isPolylineType, shiftPoints, moveVertex, toggleValvePosition, translateMarkup, updateMarkup } from '@/markup/ops';
 import { revisionCloudCorners } from '@/markup/symbols';
 import { previewTag } from '@/markup/tags';
@@ -26,6 +26,33 @@ function absoluteBox(m: Markup, pad: number) {
   const r = (m.rotation ?? 0) % 180 !== 0;
   const [bx, by, bw, bh] = r ? [-(y + h), x, h, w] : [x, y, w, h];
   return { x: p.x + bx - pad, y: p.y + by - pad, width: bw + 2 * pad, height: bh + 2 * pad };
+}
+
+/** Dashed outline and "AI" label on a markup placed by Mark up for me and not yet accepted. */
+function DraftOutline({ markup, px }: { markup: Markup; px: number }) {
+  let box: { x: number; y: number; width: number; height: number };
+  if (isPolylineType(markup.type)) {
+    const b = bounds(markup.points);
+    box = { x: b.minX - 10, y: b.minY - 10, width: b.maxX - b.minX + 20, height: b.maxY - b.minY + 20 };
+  } else {
+    box = absoluteBox(markup, 5);
+  }
+  const font = Math.max(6, 9 * px);
+  return (
+    <g pointerEvents="none" data-ai-draft="true">
+      <rect
+        {...box}
+        rx={4}
+        fill="none"
+        className="stroke-ai-draft"
+        strokeWidth={1.3 * px + 0.3}
+        strokeDasharray={`${4 * px + 1.5} ${3 * px + 1}`}
+      />
+      <text x={box.x + box.width} y={box.y - font * 0.35} textAnchor="end" fontSize={font} fontWeight={700} className="fill-ai-draft">
+        AI
+      </text>
+    </g>
+  );
 }
 
 export function MarkupOverlay({
@@ -223,6 +250,7 @@ export function MarkupOverlay({
         <g pointerEvents="none">
           <MarkupGlyph markup={m} sectionName={m.sectionId ? sectionNames.get(m.sectionId) : undefined} />
         </g>
+        {m.aiDraft && <DraftOutline markup={m} px={px} />}
 
         {/* Hit areas, only while the markup can be clicked */}
         {interactive && box && <rect {...box} fill="transparent" />}

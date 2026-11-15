@@ -112,4 +112,6 @@ export type Markup = {
   tagLocked?: boolean;
   /** Symbol rotation in degrees (0 or 90) for valves, blinds and joints on vertical lines. */
   rotation?: number;
+  /** Placed by "Mark up for me" from the AI drawing register, not yet accepted by an engineer. */
+  aiDraft?: boolean;
 };

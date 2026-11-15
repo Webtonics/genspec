@@ -1,59 +1,25 @@
-import { Check, ChevronDown, CircleAlert, Crosshair, LoaderCircle, MousePointerClick, RotateCw, ScanText, X } from 'lucide-react';
+import { Check, ChevronDown, CircleAlert, Crosshair, LoaderCircle, MousePointerClick, RotateCw, ScanText, Sparkles, Trash, X } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { create } from 'zustand';
-import { useAiStore, useCachedRegister } from '@/ai/aiStore';
-import { readDrawing, useAiStatus } from '@/ai/client';
+import { registerKey, useCachedRegister } from '@/ai/aiStore';
+import { useAiStatus } from '@/ai/client';
 import { designDataValues, locateTag, registerCount, suggestionViews } from '@/ai/drawingRegister';
 import { SECTION_FIELDS, sameValue } from '@/ai/jobDraft';
-import { isScannedPage, renderPageImages } from '@/ai/renderPage';
+import { isScannedPage } from '@/ai/renderPage';
 import type { DrawingRegister } from '@/ai/types';
 import { cx } from '@/lib/cx';
-import { fmtDate, fmtValue } from '@/lib/format';
+import { fmtDate, fmtValue, plural } from '@/lib/format';
 import type { DrawingText } from '@/markup/drawingText';
 import { MARKUP_TYPE_LABELS } from '@/model/options';
 import type { Job, Point } from '@/model/types';
-import { type PDFPageProxy, drawingKey } from '@/pdf/pdf';
+import { drawingKey } from '@/pdf/pdf';
 import { usePdfDocument, usePdfPage } from '@/pdf/usePdf';
 import { useJobStore } from '@/store/jobStore';
 import { useRules } from '@/store/settingsStore';
 import { AiBadge, AiErrorNotice, AiOffNotice } from '../ai/AiPieces';
 import { Button, IconButton } from '../ui/Button';
+import { acceptAllDrafts, markUpForMe, readPage, removeAllDrafts, useAiRuns } from './aiActions';
 import { MarkupIcon } from './MarkupGlyph';
 import { useStudio } from './studioStore';
-
-/** In-flight reads, kept outside the panel so closing it does not lose a running read. */
-type Run = { phase: 'render' | 'read'; started: number } | { phase: 'error'; error: unknown };
-const useRuns = create<{ runs: Record<string, Run | undefined> }>()(() => ({ runs: {} }));
-const setRun = (key: string, run: Run | undefined) => useRuns.setState((s) => ({ runs: { ...s.runs, [key]: run } }));
-
-const round1 = (n: number) => Math.round(n * 10) / 10;
-
-async function startRead(job: Job, pageNumber: number, page: PDFPageProxy, size: { width: number; height: number }, texts: DrawingText[]) {
-  if (!job.drawing) return;
-  const key = `${job.id}:${pageNumber}`;
-  const started = Date.now();
-  setRun(key, { phase: 'render', started });
-  try {
-    const images = await renderPageImages(page, isScannedPage(texts));
-    setRun(key, { phase: 'read', started });
-    const res = await readDrawing({
-      images,
-      texts: texts.map((t) => ({ str: t.str, x: round1(t.x), y: round1(t.y) })),
-      page: size,
-      context: { medium: job.medium, code: job.code, sections: job.sections.map((s) => s.name) },
-    });
-    useAiStore.getState().saveRegister(job.id, {
-      drawingKey: drawingKey(job.drawing),
-      page: pageNumber,
-      register: res.register,
-      model: res.model,
-      at: new Date().toISOString(),
-    });
-    setRun(key, undefined);
-  } catch (error) {
-    setRun(key, { phase: 'error', error });
-  }
-}
 
 function Elapsed({ since }: { since: number }) {
   const [now, setNow] = useState(Date.now());
@@ -70,12 +36,13 @@ export function RegisterPanel({ job }: { job: Job }) {
   const pageNumber = useStudio((s) => s.pageNumber);
   const setPanel = useStudio((s) => s.setPanel);
   const { doc } = usePdfDocument(job.drawing);
-  const { page, size, texts } = usePdfPage(doc, pageNumber);
+  const { page, texts } = usePdfPage(doc, pageNumber);
   const cached = useCachedRegister(job.id, pageNumber, job.drawing ? drawingKey(job.drawing) : undefined);
-  const run = useRuns((s) => s.runs[`${job.id}:${pageNumber}`]);
+  const run = useAiRuns((s) => s.runs[registerKey(job.id, pageNumber)]);
   const busy = run?.phase === 'render' || run?.phase === 'read';
-  const canRead = Boolean(page && size && status?.enabled) && !busy;
-  const read = () => page && size && startRead(job, pageNumber, page, size, texts);
+  const canRead = Boolean(job.drawing && status?.enabled) && !busy;
+  const read = () => readPage(job.id, pageNumber);
+  const readAndMarkUp = () => readPage(job.id, pageNumber, { thenMarkUp: true });
   const scanned = page ? isScannedPage(texts) : false;
 
   return (
@@ -117,15 +84,19 @@ export function RegisterPanel({ job }: { job: Job }) {
             {run?.phase === 'error' && <AiErrorNotice error={run.error} onRetry={read} />}
             <p className="leading-relaxed text-ink">
               Reads page {pageNumber} of the client drawing, scanned or not, and lists line numbers, equipment, valves, instruments and design data from the
-              notes, with suggested test limits you can locate and mark up.
+              notes, with suggested test limits. Mark up for me then places them on the drawing as drafts for you to check.
             </p>
             <p className="text-xs leading-relaxed text-muted">
-              The page image is sent to OpenAI to be read. Check that the client agreement allows this for their drawings. Nothing is placed on the drawing or
-              changed in the job until you do it.
+              The page image is sent to OpenAI to be read. Check that the client agreement allows this for their drawings. Every markup it places stays an
+              AI draft until an engineer accepts it.
             </p>
-            <Button variant="primary" className="w-full" disabled={!canRead} onClick={read} data-testid="read-page">
+            <Button variant="primary" className="w-full" disabled={!canRead} onClick={readAndMarkUp} data-testid="read-and-markup">
+              <Sparkles size={15} />
+              Read and mark up page {pageNumber}
+            </Button>
+            <Button variant="ghost" className="w-full" disabled={!canRead} onClick={read} data-testid="read-page">
               <ScanText size={15} />
-              Read page {pageNumber}
+              Only read the page
             </Button>
           </div>
         )}
@@ -150,6 +121,61 @@ export function RegisterPanel({ job }: { job: Job }) {
         </div>
       )}
     </aside>
+  );
+}
+
+/** Places the open suggestions as AI drafts, then accept or remove them in one go. */
+function MarkUpForMe({ job, pageNumber, open }: { job: Job; pageNumber: number; open: number }) {
+  const key = registerKey(job.id, pageNumber);
+  const working = useAiRuns((s) => s.runs[key]?.phase === 'markup');
+  const summary = useAiRuns((s) => s.summaries[key]);
+  const drafts = job.markups.filter((m) => m.aiDraft && m.page === pageNumber).length;
+
+  return (
+    <div className="space-y-2.5 border-b border-line bg-ai-draft/5 px-4 py-3" data-testid="markup-for-me">
+      {open > 0 && (
+        <>
+          <Button variant="primary" className="w-full" disabled={working} onClick={() => markUpForMe(job.id, pageNumber)} data-testid="auto-markup">
+            {working ? <LoaderCircle size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            Mark up for me
+          </Button>
+          <p className="text-xs leading-relaxed text-muted">
+            Places the {plural(open, 'open suggestion')} on the drawing as AI drafts, each snapped to the nearest line beside its tag.
+          </p>
+        </>
+      )}
+      {summary && (
+        <div className="text-xs" data-testid="markup-summary">
+          <p className="font-medium text-ink">Placed {plural(summary.added, 'draft markup')}.</p>
+          {summary.skipped.length > 0 && (
+            <p className="mt-0.5 text-muted">Not placed: {summary.skipped.map((s) => `${s.label} (${s.why})`).join('; ')}.</p>
+          )}
+        </div>
+      )}
+      {drafts > 0 && (
+        <div className="rounded-lg bg-surface px-3 py-2.5 ring-1 ring-ai-draft/40" data-testid="draft-actions">
+          <p className="text-xs text-ink">
+            <span className="font-semibold text-ai-draft">{plural(drafts, 'AI draft')}</span> on this page, outlined on the drawing. Move or delete any that are
+            wrong, then accept them. Approval waits until every draft is accepted.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <Button size="sm" variant="primary" className="flex-1" onClick={() => acceptAllDrafts(job.id)} data-testid="accept-drafts">
+              <Check size={13} />
+              Accept all
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1"
+              data-testid="remove-drafts"
+              onClick={() => window.confirm(`Remove the ${plural(drafts, 'AI draft')}? Ctrl+Z brings them back.`) && removeAllDrafts(job.id)}
+            >
+              <Trash size={13} />
+              Remove all
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -228,6 +254,8 @@ function RegisterView({ job, register, texts, pageNumber }: { job: Job; register
           <div className="mt-1.5 text-xs text-muted">{registerCount(register)} tagged items read</div>
         </div>
       )}
+
+      <MarkUpForMe job={job} pageNumber={pageNumber} open={suggestions.filter((s) => !s.done).length} />
 
       <Group title="Suggested test limits" count={suggestions.length}>
         {suggestions.length === 0 ? (

@@ -1,4 +1,4 @@
-import { FileText, RotateCw, Trash, X } from 'lucide-react';
+import { Check, FileText, RotateCw, Sparkles, Trash, X } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { cx } from '@/lib/cx';
 import { groupByType, isPolylineType, isRotatable } from '@/markup/ops';
@@ -6,6 +6,7 @@ import { MARKUP_TYPE_LABELS, VALVE_POSITION_LABELS } from '@/model/options';
 import type { Job, Markup, MarkupType, ValvePosition } from '@/model/types';
 import { Button, IconButton } from '../ui/Button';
 import { clearAllMarkups, deleteSelected, rotateSelected, sectionForNewMarkups, updateSelected } from './actions';
+import { acceptDraft } from './aiActions';
 import { MarkupIcon, positionAbbrev } from './MarkupGlyph';
 import { useStudio } from './studioStore';
 import { TOOLS } from './tools';
@@ -118,6 +119,23 @@ function MarkupProperties({ job, markup }: { job: Job; markup: Markup }) {
           <X size={16} />
         </IconButton>
       </div>
+
+      {markup.aiDraft && (
+        <div className="rounded-lg border border-dashed border-ai-draft bg-ai-draft/5 p-3" data-testid="draft-banner">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-ai-draft">
+            <Sparkles size={13} />
+            AI draft
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-ink">
+            Placed by Mark up for me. Drag it onto the right spot and check the tag and details, then accept it.
+          </p>
+          {markup.notes && <p className="mt-1 text-xs leading-relaxed text-muted">AI reason: {markup.notes}</p>}
+          <Button size="sm" variant="primary" className="mt-2 w-full" onClick={() => acceptDraft(job.id, markup.id)} data-testid="accept-draft">
+            <Check size={13} />
+            Accept
+          </Button>
+        </div>
+      )}
 
       <Field label="Tag" htmlFor="markup-tag">
         <CommitInput id="markup-tag" value={markup.tag} onCommit={(tag) => updateSelected(job.id, { tag })} className="font-mono" />
@@ -254,8 +272,13 @@ function MarkupList({ job }: { job: Job }) {
                       key={m.id}
                       type="button"
                       onClick={() => focusMarkup(m.id, m.page)}
-                      className="cursor-pointer rounded-md border border-line bg-surface px-2 py-0.5 font-mono text-[11px] font-semibold text-ink transition-colors hover:border-primary hover:text-primary"
+                      title={m.aiDraft ? 'AI draft, not yet accepted' : undefined}
+                      className={cx(
+                        'cursor-pointer rounded-md border bg-surface px-2 py-0.5 font-mono text-[11px] font-semibold text-ink transition-colors hover:border-primary hover:text-primary',
+                        m.aiDraft ? 'border-dashed border-ai-draft' : 'border-line',
+                      )}
                     >
+                      {m.aiDraft && <span className="mr-1 font-sans text-[9px] font-bold text-ai-draft">AI</span>}
                       {m.tag}
                       {m.type === 'valve' && (
                         <span className="ml-1 font-sans font-normal text-muted">{positionAbbrev(m.valvePosition)}</span>

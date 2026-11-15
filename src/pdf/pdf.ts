@@ -6,6 +6,7 @@ import * as pdfjs from 'pdfjs-dist';
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { DrawingText } from '@/markup/drawingText';
+import { type Matrix, type PathOps, type Segment, segmentsFromOperatorList } from '@/markup/lineSnap';
 import type { Drawing } from '@/model/types';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -95,4 +96,11 @@ export async function extractPageText(page: PDFPageProxy): Promise<DrawingText[]
     out.push({ str: item.str, x: x + item.width / 2, y: y - height / 2, width: item.width, height });
   }
   return out;
+}
+
+/** The page's linework as straight segments in page points from the top-left, for snapping markups onto lines. */
+export async function extractPageSegments(page: PDFPageProxy): Promise<Segment[]> {
+  const viewport = page.getViewport({ scale: 1 });
+  const list = await page.getOperatorList();
+  return segmentsFromOperatorList(list.fnArray, list.argsArray, pdfjs.OPS as unknown as PathOps, viewport.transform as Matrix);
 }

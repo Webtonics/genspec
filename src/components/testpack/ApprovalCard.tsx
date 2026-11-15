@@ -1,7 +1,9 @@
 import { BadgeCheck, CircleAlert, Undo2 } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { JobCalc } from '@/calc';
 import type { Job } from '@/model/types';
+import { jobPath } from '@/navigation';
 import { useJobStore } from '@/store/jobStore';
 import { Button } from '../ui/Button';
 import { Card, CardHeader } from '../ui/Page';
@@ -15,6 +17,7 @@ export function ApprovalCard({ job, calc }: { job: Job; calc: JobCalc }) {
   const withdrawApproval = useJobStore((s) => s.withdrawApproval);
   const [name, setName] = useState('');
   const red = calc.sections.filter((s) => s.flag?.flag === 'RED').map((s) => s.name);
+  const drafts = job.markups.filter((m) => m.aiDraft).length;
 
   if (job.status === 'APPROVED') {
     return (
@@ -52,7 +55,7 @@ export function ApprovalCard({ job, calc }: { job: Job; calc: JobCalc }) {
         className="space-y-3 p-5"
         onSubmit={(e) => {
           e.preventDefault();
-          if (name.trim()) approveJob(job.id, name);
+          if (name.trim() && drafts === 0) approveJob(job.id, name);
         }}
       >
         <label className="block">
@@ -71,8 +74,20 @@ export function ApprovalCard({ job, calc }: { job: Job; calc: JobCalc }) {
             {red.join(', ')} {red.length === 1 ? 'is' : 'are'} flagged RED. Approve only once the engineer has resolved it.
           </p>
         )}
+        {drafts > 0 && (
+          <p className="flex gap-2 rounded-md bg-ai-draft/10 px-3 py-2 text-xs text-ink ring-1 ring-ai-draft/30" data-testid="drafts-block-approval">
+            <CircleAlert size={14} className="mt-0.5 shrink-0 text-ai-draft" />
+            <span>
+              {drafts === 1 ? '1 markup is an AI draft' : `${drafts} markups are AI drafts`} not yet accepted. Check and accept them in the{' '}
+              <Link to={jobPath(job.id, 'markup')} className="font-medium text-primary hover:underline">
+                Markup studio
+              </Link>{' '}
+              before approving.
+            </span>
+          </p>
+        )}
         <p className="text-xs text-muted">Stamps your name and the time into every title block and removes the FOR REVIEW watermark.</p>
-        <Button type="submit" variant="primary" className="w-full" disabled={!name.trim()}>
+        <Button type="submit" variant="primary" className="w-full" disabled={!name.trim() || drafts > 0}>
           <BadgeCheck size={15} />
           Approve revision {job.revision}
         </Button>

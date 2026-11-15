@@ -42,6 +42,8 @@
   --accent: #d7263d;
   --highlight: #ffd60a;
   --selection: #0ea5e9;
+  /* AI draft markups, until an engineer accepts them */
+  --ai-draft: #7c3aed;
   --viewer-bg: #d9dfe7;
 }
 
@@ -77,6 +79,7 @@
   --accent: #ffb020;
   --highlight: #ffb020;
   --selection: #4cc9f0;
+  --ai-draft: #ffb020;
   --viewer-bg: #050807;
 }
 
@@ -110,6 +113,7 @@
   --color-accent: var(--accent);
   --color-highlight: var(--highlight);
   --color-selection: var(--selection);
+  --color-ai-draft: var(--ai-draft);
   --color-viewer: var(--viewer-bg);
 }
 

@@ -57,14 +57,19 @@ export const TOUR_STEPS: TourStep[] = [
     route: jobPath(JOB, 'markup'),
     target: 'read-drawing',
     requiresAi: true,
-    title: 'AI reads the client drawing',
-    body: 'Read drawing sends the page, scanned or not, to the AI. It lists the line numbers, valves, equipment and instruments, checks the design data in the notes against the test section, and suggests test limits. Locate shows each one on the sheet; the engineer still places every markup.',
+    title: 'AI reads and marks up the drawing',
+    body: 'The AI reads the page, scanned or not: line numbers, valves, instruments and the design data in the notes, checked against the test section. Mark up for me then places its suggested test limits on the sheet as AI drafts, snapped to the lines. The engineer moves, deletes or accepts each one, and cannot approve until all are accepted.',
     action: {
-      label: 'Open the drawing register',
-      available: () => useStudio.getState().panel !== 'register',
+      label: 'Read the drawing and mark it up',
+      available: () => !demoJob()?.markups.some((m) => m.aiDraft),
       run: () => {
         useStudio.getState().setPanel('register');
-        return 'The register is open on the right. If this page has not been read yet, press Read page 1 (it takes under a minute).';
+        // Loaded on demand: the AI actions pull in the PDF renderer.
+        void import('@/components/markup/aiActions').then(async ({ hasRegister, markUpForMe, readPage }) => {
+          if (hasRegister(JOB, 1)) await markUpForMe(JOB, 1);
+          else await readPage(JOB, 1, { thenMarkUp: true });
+        });
+        return 'Working on it. The drafts appear on the sheet with a dashed AI outline; accept them in the panel on the right.';
       },
     },
   },
