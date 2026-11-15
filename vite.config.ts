@@ -3,9 +3,11 @@ import { fileURLToPath, URL } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { apiPlugin } from './server/viteApi';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  // apiPlugin serves the /api functions locally, the same files Vercel deploys.
+  plugins: [react(), tailwindcss(), apiPlugin()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -24,6 +26,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'api/**/*.test.ts'],
   },
 });

@@ -29,3 +29,17 @@ export const NPS_OD_MM: Record<number, number> = {
 };
 
 export const standardOd = (nps: number): number | undefined => NPS_OD_MM[nps];
+
+/** The NPS whose standard outside diameter is within `toleranceMm` of `odMm`, if any. */
+export function npsForOd(odMm: number, toleranceMm = 0.15): number | undefined {
+  let best: number | undefined;
+  let bestDiff = toleranceMm;
+  for (const [nps, od] of Object.entries(NPS_OD_MM)) {
+    const diff = Math.abs(od - odMm);
+    if (diff <= bestDiff) {
+      best = Number(nps);
+      bestDiff = diff;
+    }
+  }
+  return best;
+}

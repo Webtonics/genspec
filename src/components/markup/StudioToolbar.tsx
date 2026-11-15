@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Hand, Maximize, MousePointer2, Redo2, Shapes, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Hand, Maximize, MousePointer2, Redo2, ScanText, Shapes, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 import { cx } from '@/lib/cx';
 import type { Job } from '@/model/types';
@@ -79,6 +79,8 @@ export function StudioToolbar({ job }: { job: Job }) {
   const setPage = useStudio((s) => s.setPage);
   const showLegend = useStudio((s) => s.showLegend);
   const toggleLegend = useStudio((s) => s.toggleLegend);
+  const panel = useStudio((s) => s.panel);
+  const setPanel = useStudio((s) => s.setPanel);
   const canUndo = useCanUndo(job.id);
   const canRedo = useCanRedo(job.id);
   const pageCount = job.drawing?.pageCount ?? 1;
@@ -97,6 +99,23 @@ export function StudioToolbar({ job }: { job: Job }) {
       ))}
 
       <div className="ml-auto flex items-center gap-0.5 pl-4">
+        <button
+          type="button"
+          aria-pressed={panel === 'register'}
+          title="AI reads the drawing: tags, design data and suggested test limits"
+          data-testid="read-drawing"
+          data-tour="read-drawing"
+          onClick={() => setPanel(panel === 'register' ? 'properties' : 'register')}
+          className={cx(
+            'flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold whitespace-nowrap transition-colors',
+            'focus-visible:outline-2 focus-visible:outline-primary',
+            panel === 'register' ? 'bg-primary/10 text-primary ring-1 ring-primary/50' : 'text-ink ring-1 ring-line hover:bg-surface-2',
+          )}
+        >
+          <ScanText size={16} />
+          Read drawing
+        </button>
+        <Divider />
         <ActionButton label="Undo (Ctrl+Z)" disabled={!canUndo} onClick={() => stepHistory(job.id, 'undo')}>
           <Undo2 size={18} />
         </ActionButton>

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { DrawingViewer } from '@/components/markup/DrawingViewer';
 import { NoDrawing } from '@/components/markup/NoDrawing';
 import { PropertiesPanel } from '@/components/markup/PropertiesPanel';
+import { RegisterPanel } from '@/components/markup/RegisterPanel';
 import { StudioToolbar } from '@/components/markup/StudioToolbar';
 import { useStudio } from '@/components/markup/studioStore';
 import { useStudioKeyboard } from '@/components/markup/useStudioKeyboard';
@@ -12,6 +13,7 @@ import { useCurrentJob } from '@/hooks/useCurrentJob';
 export function MarkupStudioPage() {
   const job = useCurrentJob();
   const reset = useStudio((s) => s.reset);
+  const panel = useStudio((s) => s.panel);
   const [params, setParams] = useSearchParams();
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export function MarkupStudioPage() {
       <StudioToolbar job={job} />
       <div className="flex min-h-0 flex-1">
         <DrawingViewer job={job} />
-        <PropertiesPanel job={job} />
+        {panel === 'register' ? <RegisterPanel job={job} /> : <PropertiesPanel job={job} />}
       </div>
     </div>
   );

@@ -6,7 +6,15 @@ export type Tool = 'select' | 'pan' | MarkupType;
 /** Viewport-relative position (px) to keep fixed while zooming. */
 export type ZoomAnchor = { x: number; y: number };
 
+/** What the right-hand panel shows. */
+export type SidePanel = 'properties' | 'register';
+
+/** A spot on the drawing to point at, e.g. a tag from the AI drawing register. */
+export type LocateRequest = { point: Point; page: number; label: string; nonce: number };
+
 export const ZOOM_MIN = 0.2;
+/** Locating something zooms in at least this far, so the spot is readable. */
+const LOCATE_ZOOM = 1.75;
 export const ZOOM_MAX = 6;
 const clampZoom = (z: number) => Math.min(Math.max(z, ZOOM_MIN), ZOOM_MAX);
 
@@ -29,6 +37,8 @@ type StudioState = {
   newSectionId: string | null | undefined;
   /** Bumped to ask the viewer to scroll a markup into view. */
   focus: { id: string; nonce: number } | null;
+  panel: SidePanel;
+  locate: LocateRequest | null;
 
   setTool: (tool: Tool) => void;
   select: (id: string | null) => void;
@@ -43,6 +53,9 @@ type StudioState = {
   toggleLegend: () => void;
   setNewSection: (id: string | null) => void;
   focusMarkup: (id: string, page: number) => void;
+  setPanel: (panel: SidePanel) => void;
+  /** Scroll to a point (in page points) and pulse a marker on it. */
+  locatePoint: (point: Point, page: number, label: string) => void;
   reset: () => void;
 };
 
@@ -58,6 +71,8 @@ const initial = {
   spaceHeld: false,
   newSectionId: undefined,
   focus: null,
+  panel: 'properties' as SidePanel,
+  locate: null,
 };
 
 /** Transient Markup studio state (not persisted): tool, selection, zoom, drafts. */
@@ -79,5 +94,13 @@ export const useStudio = create<StudioState>()((set, get) => ({
   toggleLegend: () => set({ showLegend: !get().showLegend }),
   setNewSection: (newSectionId) => set({ newSectionId }),
   focusMarkup: (id, page) => set({ selectedId: id, pageNumber: page, focus: { id, nonce: Date.now() } }),
+  setPanel: (panel) => set({ panel }),
+  locatePoint: (point, page, label) =>
+    set((s) => ({
+      ...(s.pageNumber !== page ? { pageNumber: page, selectedId: null, draft: [] } : {}),
+      zoom: clampZoom(Math.max(s.zoom, LOCATE_ZOOM)),
+      zoomAnchor: null,
+      locate: { point, page, label, nonce: Date.now() },
+    })),
   reset: () => set({ ...initial, fitNonce: get().fitNonce + 1 }),
 }));

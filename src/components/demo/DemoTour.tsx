@@ -1,7 +1,8 @@
 import { Sparkles, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { TOUR_STEPS, useTour } from '@/demo/tour';
+import { useAiStatus } from '@/ai/client';
+import { tourSteps, useTour } from '@/demo/tour';
 import { cx } from '@/lib/cx';
 import { useJobStore } from '@/store/jobStore';
 import { Button, IconButton } from '../ui/Button';
@@ -23,8 +24,10 @@ export function DemoTour() {
   const [message, setMessage] = useState<string | null>(null);
   // Re-render when the job changes so an action's availability updates.
   useJobStore((s) => s.jobs);
-  const def = TOUR_STEPS[step];
-  const last = step === TOUR_STEPS.length - 1;
+  const ai = useAiStatus();
+  const steps = tourSteps(Boolean(ai?.enabled));
+  const def = steps[Math.min(step, steps.length - 1)];
+  const last = step >= steps.length - 1;
 
   useEffect(() => {
     if (!active) return;
@@ -84,7 +87,7 @@ export function DemoTour() {
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-primary uppercase">
             <Sparkles size={13} />
-            Guided demo · Step {step + 1} of {TOUR_STEPS.length}
+            Guided demo · Step {step + 1} of {steps.length}
           </span>
           <IconButton aria-label="End the demo" onClick={stop}>
             <X size={16} />
@@ -103,7 +106,7 @@ export function DemoTour() {
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="flex gap-1.5" aria-hidden>
-            {TOUR_STEPS.map((_, i) => (
+            {steps.map((_, i) => (
               <span key={i} className={cx('h-1.5 rounded-full transition-all', i === step ? 'w-5 bg-primary' : 'w-1.5 bg-line-strong')} />
             ))}
           </div>

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useStudio } from '@/components/markup/studioStore';
 import { DEMO_JOB_IDS } from '@/model/seed';
 import { jobPath } from '@/navigation';
 import { useJobStore } from '@/store/jobStore';
@@ -21,6 +22,8 @@ export type TourStep = {
   body: string;
   action?: TourAction;
   onEnter?: () => void;
+  /** Only shown when the server has AI switched on. */
+  requiresAi?: boolean;
 };
 
 const JOB = DEMO_JOB_IDS.hydrotest;
@@ -47,6 +50,21 @@ export const TOUR_STEPS: TourStep[] = [
       run: () => {
         const n = placeDemoMarkups(JOB);
         return n ? `Placed ${n} markups. Ctrl+Z takes them off again.` : 'Markups could not be placed on this drawing.';
+      },
+    },
+  },
+  {
+    route: jobPath(JOB, 'markup'),
+    target: 'read-drawing',
+    requiresAi: true,
+    title: 'AI reads the client drawing',
+    body: 'Read drawing sends the page, scanned or not, to the AI. It lists the line numbers, valves, equipment and instruments, checks the design data in the notes against the test section, and suggests test limits. Locate shows each one on the sheet; the engineer still places every markup.',
+    action: {
+      label: 'Open the drawing register',
+      available: () => useStudio.getState().panel !== 'register',
+      run: () => {
+        useStudio.getState().setPanel('register');
+        return 'The register is open on the right. If this page has not been read yet, press Read page 1 (it takes under a minute).';
       },
     },
   },
@@ -108,6 +126,11 @@ export const useTour = create<TourState>()((set) => ({
   active: false,
   step: 0,
   start: () => set({ active: true, step: 0 }),
-  go: (step) => set({ step: Math.min(Math.max(step, 0), TOUR_STEPS.length - 1) }),
+  go: (step) => set({ step: Math.max(step, 0) }),
   stop: () => set({ active: false, step: 0 }),
 }));
+
+/** The steps for this server: the AI step only when AI is switched on. */
+export function tourSteps(aiEnabled: boolean): TourStep[] {
+  return TOUR_STEPS.filter((s) => !s.requiresAi || aiEnabled);
+}

@@ -3,6 +3,7 @@ import { type ReactNode, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { calculateJob } from '@/calc';
 import { JobPageHeader } from '@/components/JobPageHeader';
+import { DescribeJobCard } from '@/components/setup/DescribeJobCard';
 import { Button, IconButton } from '@/components/ui/Button';
 import { FlagChip } from '@/components/ui/FlagChip';
 import { NumberInput, TextInput } from '@/components/ui/NumberInput';
@@ -73,6 +74,7 @@ export function JobSetupPage() {
     <Page>
       <JobPageHeader job={job} pageKey="setup" />
       <div className="space-y-6">
+        <DescribeJobCard job={job} />
         <Card>
           <CardHeader title="Job details" description="Saved as you type. The job number, client and title appear in every title block." />
           <div className="grid gap-5 p-5 md:grid-cols-2 xl:grid-cols-3">

@@ -21,6 +21,7 @@ export function DrawingViewer({ job }: { job: Job }) {
   const zoom = useStudio((s) => s.zoom);
   const fitNonce = useStudio((s) => s.fitNonce);
   const focus = useStudio((s) => s.focus);
+  const locate = useStudio((s) => s.locate);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastScroll = useRef({ left: 0, top: 0 });
@@ -102,6 +103,18 @@ export function DrawingViewer({ job }: { job: Job }) {
     });
   }, [focus, size, pageNumber]);
 
+  // Scroll to a spot asked for by the drawing register (Locate).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !locate || !size || locate.page !== pageNumber) return;
+    const off = offsetAt(zoom);
+    el.scrollTo({
+      left: off.x + locate.point.x * zoom - el.clientWidth / 2,
+      top: off.y + locate.point.y * zoom - el.clientHeight / 2,
+      behavior: 'smooth',
+    });
+  }, [locate, size, pageNumber]);
+
   const offset = offsetAt(zoom);
   const ready = renderedPage === pageNumber;
 
@@ -126,6 +139,9 @@ export function DrawingViewer({ job }: { job: Job }) {
               >
                 <PdfCanvas key={pageNumber} page={page} zoom={zoom} onRendered={() => setRenderedPage(pageNumber)} />
                 <MarkupOverlay job={job} size={size} texts={texts} scrollRef={scrollRef} />
+                {locate && locate.page === pageNumber && (
+                  <LocatePulse key={locate.nonce} x={locate.point.x * zoom} y={locate.point.y * zoom} label={locate.label} />
+                )}
               </div>
             </div>
           )}
@@ -152,6 +168,25 @@ export function DrawingViewer({ job }: { job: Job }) {
         <ScadaPdfFilter />
       </div>
       <StatusBar />
+    </div>
+  );
+}
+
+/** Pulsing ring on a located tag, gone after a few seconds. */
+function LocatePulse({ x, y, label }: { x: number; y: number; label: string }) {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(false), 6000);
+    return () => window.clearTimeout(timer);
+  }, []);
+  if (!visible) return null;
+  return (
+    <div className="pointer-events-none absolute z-20" style={{ left: x, top: y }} data-testid="locate-pulse" aria-hidden>
+      <span className="absolute -top-8 -left-8 size-16 animate-ping rounded-full border-4 border-primary/70" />
+      <span className="absolute -top-8 -left-8 size-16 rounded-full border-2 border-primary bg-primary/5" />
+      <span className="absolute -top-3 left-10 rounded bg-primary px-1.5 py-0.5 font-mono text-[11px] font-semibold whitespace-nowrap text-primary-fg shadow-md">
+        {label}
+      </span>
     </div>
   );
 }
