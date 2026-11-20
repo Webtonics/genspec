@@ -1,4 +1,4 @@
-import type { AiStatus } from '../src/ai/types';
+import type { AiStatus } from '../src/ai/types.js';
 import { aiConfig, json } from './_lib/openai.js';
 
 /** GET /api/ai-status: whether the AI features are available, without revealing the key. */

@@ -1,4 +1,4 @@
-import type { JobExtraction, ParseJobRequest, ParseJobResponse } from '../src/ai/types';
+import type { JobExtraction, ParseJobRequest, ParseJobResponse } from '../src/ai/types.js';
 import { AiError, aiConfig, errorResponse, guard, json, readJson, structuredCompletion } from './_lib/openai.js';
 import { JOB_SCHEMA, PARSE_JOB_PROMPT } from './_lib/schemas.js';
 

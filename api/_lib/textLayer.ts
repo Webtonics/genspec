@@ -1,4 +1,4 @@
-import type { ReadDrawingRequest } from '../../src/ai/types';
+import type { ReadDrawingRequest } from '../../src/ai/types.js';
 
 const MAX_TEXTS = 1500;
 const MAX_CHARS = 60_000;

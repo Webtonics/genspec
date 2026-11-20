@@ -1,4 +1,4 @@
-import type { DrawingRegister, ReadDrawingRequest, ReadDrawingResponse } from '../src/ai/types';
+import type { DrawingRegister, ReadDrawingRequest, ReadDrawingResponse } from '../src/ai/types.js';
 import { AiError, aiConfig, errorResponse, guard, json, readJson, structuredCompletion } from './_lib/openai.js';
 import { READ_DRAWING_PROMPT, REGISTER_SCHEMA } from './_lib/schemas.js';
 import { textLayerSummary } from './_lib/textLayer.js';
